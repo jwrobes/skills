@@ -20,7 +20,8 @@ For more on the format, see [Anthropic's skills repo](https://github.com/anthrop
 
 | Skill | Purpose |
 |---|---|
-| [`tdd-pocock/`](./tdd-pocock/) | Test-driven development with red-green-refactor. Includes companion docs on mocking, deep modules, interface design, refactoring, and tests. |
+| [`tdd-pocock/`](./tdd-pocock/) | Test-driven development with red-green-refactor. Adapted from [Matt Pocock's TDD skill](https://github.com/mattpocock/skills/tree/main/tdd) (MIT-licensed; see [`tdd-pocock/ATTRIBUTION.md`](./tdd-pocock/ATTRIBUTION.md)). Includes companion docs on mocking, deep modules, interface design, refactoring, and tests. |
+| [`code-review/`](./code-review/) | Seven-phase code review checklist (architecture, collaboration, naming, errors, tests, frontend, commits) with a 0–3 per-phase scoring rubric. |
 | [`grill-me/`](./grill-me/) | Stress-test a plan or design through a relentless interview until shared understanding is reached. |
 | [`improve-codebase-architecture/`](./improve-codebase-architecture/) | Explore a codebase for architectural friction, find coupling, propose module-deepening refactors. Includes a `REFERENCE.md` with the conceptual framework. |
 | [`extract-engineering-style/`](./extract-engineering-style/) | Mine git history (and optionally MR comments) to extract coding conventions and review voice for named engineers. |
@@ -34,6 +35,8 @@ For more on the format, see [Anthropic's skills repo](https://github.com/anthrop
 | [`enforce-integration-test/`](./enforce-integration-test/) | Plan and validate end-to-end integration tests before running them. Prevents mock-heavy tests from masquerading as integration tests. |
 | [`playwright-capture-flow/`](./playwright-capture-flow/) | Capture an MCP-driven Playwright exploration as a reusable script. |
 | [`setup-nvim-tmux/`](./setup-nvim-tmux/) | Replicate my Neovim + tmux dev environment on a new macOS machine. |
+| [`gh-pr-create/`](./gh-pr-create/) | Recipe-style skill for opening clean GitHub PRs via the `gh` CLI: draft-first, body-from-file, structured template. |
+| [`full-path-github/`](./full-path-github/) | Confidence-gated orchestrator that takes a GitHub issue and delivers a reviewed, tested draft PR. Composes `grill-me`, `structured-backlog`, `tdd-pocock`, `code-review`, and `gh-pr-create`. Designed for personal projects. |
 
 ## Install
 
@@ -64,7 +67,7 @@ These skills exist in my local toolkit but aren't published yet. Each requires m
 
 - **`playwright-send-message`** — a Playwright wrapper for a specific Rails-app messaging flow at work. Not generic; would need to be re-authored as a "playwright wrapper template" skill rather than scrubbed.
 - **`draft-gitlab-issue`** — heavily GitLab-flavored. Plan is to generalize into a `draft-issue` skill that handles GitHub and GitLab, or split into `draft-github-issue` and `draft-gitlab-issue` with a shared core.
-- **`full-path-orchestrator`** — chains intake → planning → execution → MR for a GitLab issue. The shape is generic but the implementation composes several work-only skills and assumes GitLab. Needs a design pass before publishing as a GitHub-friendly version.
+- **`full-path-orchestrator`** (GitLab variant) — the GitLab-flavored sibling of `full-path-github`. Stays internal; the public version here is `full-path-github`.
 
 The migration plan for these and future skills lives in my private docs (gist of it: pure copies, scrub on publish, no symlinks back to source).
 
