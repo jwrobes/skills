@@ -1,11 +1,11 @@
 ---
 name: scaffold-workspace
-description: Create a new project workspace folder with workbench, worktree, Cursor rules, and .code-workspace file. Use when the user wants to set up a new project workspace, create a workspace for a new project, or start working on a new project initiative. Also handles adding new initiatives to an existing workspace.
+description: Create a new project workspace folder with workbench, worktree, workspace CLAUDE.md, and .code-workspace file. Use when the user wants to set up a new project workspace, create a workspace for a new project, or start working on a new project initiative. Also handles adding new initiatives to an existing workspace.
 ---
 
 # Scaffold Project Workspace
 
-Set up a standardized project workspace at `~/workspace/<project>_workspace/` with a workbench, git worktree, Cursor rules, and multi-root `.code-workspace` file.
+Set up a standardized project workspace at `~/workspace/<project>_workspace/` with a workbench, git worktree, workspace CLAUDE.md, and multi-root `.code-workspace` file.
 
 ## Prerequisites
 
@@ -17,6 +17,17 @@ The main project repository must already be cloned at `~/workspace/<project>/`. 
 - User mentions "set up a workspace for \<project\>"
 - User wants to add a new initiative/feature to an existing workspace
 
+## The bootstrap-files pattern
+
+Many projects need credentials or config files (Shopify store passwords, API keys, asdf `.tool-versions`) that aren't safe to commit but need to be available to commands run from inside a worktree. The pattern this skill uses:
+
+- The canonical file lives at `~/workspace/<project>_workspace/<file>` (the workspace root)
+- Each worktree has a symlink to it: `~/workspace/<project>_workspace/<project>-<initiative>/<file> -> ../<file>`
+- The workspace `.gitignore` excludes `<file>` so it's never committed to the workspace repo
+- The project repo's `.gitignore` should also exclude it (verify when scaffolding)
+
+This means: update the file in one place, every worktree picks up the change. Commands like `source .env.local` work from inside any worktree.
+
 ## Step 1: Gather Information
 
 Ask the user for the following. Use sensible defaults where noted.
@@ -25,6 +36,7 @@ Ask the user for the following. Use sensible defaults where noted.
 2. **Initiative name** — What's the first unit of work? (e.g., `auth_refactor`, `dark_mode`). This becomes both the workbench subfolder and part of the worktree directory name. Use `lowercase_with_underscores`.
 3. **Branch name** — Git branch for the worktree. Default: `build-<username>-<initiative-name-with-hyphens>`. Detect `<username>` from `git config user.name` or `whoami`.
 4. **Reference projects** — Other repos the agent should have access to while working on this initiative. List of project names. The user can skip this.
+5. **Shared bootstrap files** — Does this project need any files at the workspace root that should be symlinked into every worktree? Common examples: `.env.local` (API keys, store passwords for Shopify/Vercel/etc.), `.tool-versions` (asdf), `credentials.json`. List them. The skill will create the file(s) at the workspace root, add them to `.gitignore`, and symlink them into each worktree so commands run from inside a worktree can read them.
 
 ## Step 2: Validate
 
@@ -41,8 +53,7 @@ mkdir -p ~/workspace/<project>_workspace
 cd ~/workspace/<project>_workspace
 git init
 mkdir -p workbench/<initiative_name>
-mkdir -p .cursor/rules
-mkdir -p .cursor/skills
+mkdir -p .claude/skills
 ```
 
 ### Write `.gitignore`
@@ -50,6 +61,10 @@ mkdir -p .cursor/skills
 ```
 # Worktree directories (created from ~/workspace/<project>)
 <project>-*/
+
+# Workspace-shared bootstrap files (credentials, env vars, etc.)
+# Lives at the workspace root and is symlinked into each worktree.
+.env*
 
 # OS files
 .DS_Store
@@ -69,6 +84,32 @@ git worktree add ~/workspace/<project>_workspace/<project>-<initiative_slugified
 ```
 
 Where `<initiative_slugified>` converts underscores to hyphens (e.g., `coverage_transfer_bug` → `coverage-transfer-bug`).
+
+## Step 4.5: Symlink Shared Bootstrap Files Into the Worktree
+
+If the user named bootstrap files in Step 1, do the following for each one. If they didn't name any, skip this step entirely.
+
+1. **Create the canonical file at the workspace root** with a placeholder template. For example, for `.env.local`:
+
+   ```bash
+   cat > ~/workspace/<project>_workspace/.env.local <<'EOF'
+   # Workspace-shared environment vars. Each worktree symlinks this. Do not commit.
+   SHOPIFY_STORE_PASSWORD=
+   EOF
+   ```
+
+   Include any keys the user mentioned, with `=` and a placeholder value they can fill in.
+
+2. **Symlink the file into the worktree:**
+
+   ```bash
+   cd ~/workspace/<project>_workspace/<project>-<initiative_slugified>
+   ln -s ../<filename> <filename>
+   ```
+
+   The workspace root holds the canonical file (one place to update credentials). Each worktree has a symlink, so the file is reachable as `./<filename>` from inside any worktree, and `source .env.local` works from the worktree directory.
+
+3. **Verify the project repo's `.gitignore` excludes the file** so the symlink is never committed by accident. The workspace `.gitignore` already excludes it (Step 3). Check `~/workspace/<project>/.gitignore` and add the pattern if missing — note this in your summary so the user can commit that change in the main repo when they're ready.
 
 ## Step 5: Create the `.code-workspace` File
 
@@ -101,18 +142,22 @@ If the user specified reference projects, add entries for each:
 
 The path `../../../<ref_project>` navigates from `workbench/<initiative>/` up to `~/workspace/` and into the reference project.
 
-## Step 6: Create the Cursor Rule
+## Step 6: Create the Workspace CLAUDE.md
 
-Write to `~/workspace/<project>_workspace/.cursor/rules/commit-only-in-worktree.mdc`:
+Write to `~/workspace/<project>_workspace/CLAUDE.md`. Claude Code auto-loads this file for any session opened inside the workspace, so it carries the workspace rules:
 
 ```markdown
-# Commit Only in Worktrees
+# <project> Workspace
 
-When working in this workspace, ONLY commit code changes to git worktree directories (folders matching `<project>-*/`). Never commit directly to the main project repository at `~/workspace/<project>/`.
+This is a multi-root workspace, not a single repo. Layout:
 
-## Rules
+- `workbench/` — Planning docs, analysis scripts, experiments. Tracked by THIS workspace's own git repo (`~/workspace/<project>_workspace/.git`). One subfolder per initiative.
+- `<project>-*/` — Git worktrees for active work, created from the main clone at `~/workspace/<project>/`. Each is a separate checkout of the project repo on its own branch.
+- `~/workspace/<project>/` — The main project clone. Worktrees are created from it; do NOT work directly in it.
 
-1. All code changes (features, bug fixes, refactors) MUST be committed in the worktree directory for the current initiative.
+## Commit Rules
+
+1. ONLY commit code changes (features, bug fixes, refactors) in git worktree directories (folders matching `<project>-*/`). Never commit directly to the main project clone at `~/workspace/<project>/`.
 2. The workbench directory is tracked by this workspace's own git repo — workbench changes (docs, plans, output) are committed to the workspace repo at `~/workspace/<project>_workspace/`.
 3. Never run `git push` from within a worktree without explicit user approval.
 4. When creating new files, place them in the correct git context:
@@ -121,12 +166,30 @@ When working in this workspace, ONLY commit code changes to git worktree directo
 5. Before committing, verify you are in the correct directory by checking `git remote -v` — the worktree remote should point to the project's GitLab origin, not the workspace repo.
 ```
 
+### Optional: Workspace-Scoped Permissions
+
+Optionally create `.claude/settings.json` at the workspace root to allowlist common read-only commands for any Claude Code session in the workspace. Ask the user — they can skip this. Minimal example:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git worktree list:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
+```
+
 ## Step 7: Check for Project-Specific Setup Skill
 
-Check if `~/workspace/<project>_workspace/.cursor/skills/<project>-worktree-setup/SKILL.md` exists.
+Check if `~/workspace/<project>_workspace/.claude/skills/<project>-worktree-setup/SKILL.md` exists. Claude Code discovers skills in a project-level `.claude/skills/` directory.
 
 - **If it exists:** Tell the user: "Found a project-specific worktree setup skill for `<project>`. Running it now..." and follow its instructions to configure the new worktree.
-- **If it doesn't exist:** Ask the user: "No project-specific setup skill found for `<project>`. Some projects need special worktree setup (Docker config, `.env` files, credential scripts, etc.). Want to create a setup skill now?" If yes, scaffold a `SKILL.md` at `.cursor/skills/<project>-worktree-setup/SKILL.md` by asking what setup steps are needed for this project's worktrees.
+- **If it doesn't exist:** Ask the user: "No project-specific setup skill found for `<project>`. Some projects need special worktree setup (Docker config, `.env` files, credential scripts, etc.). Want to create a setup skill now?" If yes, scaffold a `SKILL.md` at `.claude/skills/<project>-worktree-setup/SKILL.md` by asking what setup steps are needed for this project's worktrees. Suggest including a **symlink-bootstrap-files step** as one of the standard things the setup skill should do — for any `.env*` or other shared credential files at the workspace root, the setup skill should `ln -s ../<filename> <filename>` into each new worktree. This is a recurring pattern (Shopify/Vercel/AWS credentials, asdf `.tool-versions`, etc.) and worth codifying once per project.
 
 ## Step 8: Create the Workspace README
 
@@ -141,14 +204,17 @@ Workspace for <project>-focused investigations and feature work. Worktrees are c
 
 - `workbench/` — Planning docs, analysis scripts, experiments (tracked in this repo)
 - `<project>-<branch>/` — Git worktrees for active work (created from main clone)
-- `.cursor/rules/` — Workspace-level Cursor rules
-- `.cursor/skills/` — Project-specific Cursor skills
+- `.claude/skills/` — Project-specific Claude Code skills
+- `CLAUDE.md` — Workspace rules auto-loaded by Claude Code
 
 ## Setup
 
 ```bash
 # Open an initiative in Cursor with scoped context
 cursor ~/workspace/<project>_workspace/workbench/<initiative_name>/<initiative_name>.code-workspace
+
+# Or start Claude Code from the workspace (CLAUDE.md is auto-loaded)
+cd ~/workspace/<project>_workspace && claude
 
 # Create a new worktree for a feature/bug
 cd ~/workspace/<project>
@@ -211,10 +277,19 @@ If `~/workspace/<project>_workspace/` already exists, add a new initiative witho
    git worktree add ~/workspace/<project>_workspace/<project>-<initiative_slugified> -b <branch_name>
    ```
 4. **Create** the `.code-workspace` file in `workbench/<initiative_name>/`
-5. **Update** `.gitignore` — add the new worktree directory pattern if not already covered by the glob
-6. **Update** `README.md` — add a row to the Active Worktrees table
-7. **Run** the project-specific setup skill if it exists at `.cursor/skills/<project>-worktree-setup/SKILL.md`
-8. **Commit:**
+5. **Symlink shared bootstrap files** — for each `.env*` file (or other shared credential file) at the workspace root, create a symlink in the new worktree so commands run from the worktree directory can source them:
+   ```bash
+   cd ~/workspace/<project>_workspace/<project>-<initiative_slugified>
+   for f in ../.env*; do
+     [ -e "$f" ] && ln -s "$f" "$(basename "$f")"
+   done
+   ```
+   If the project uses other shared files (e.g., `credentials.json`, `.tool-versions`), symlink those too: `ln -s ../<filename> <filename>`.
+6. **Update** `.gitignore` — add the new worktree directory pattern if not already covered by the glob
+7. **Update** `README.md` — add a row to the Active Worktrees table
+8. **Run** the project-specific setup skill if it exists at `.claude/skills/<project>-worktree-setup/SKILL.md`
+9. **Migrate older workspaces** — if the workspace predates this version and still has `.cursor/rules/commit-only-in-worktree.mdc` but no `CLAUDE.md` at the workspace root, offer to migrate: write the workspace `CLAUDE.md` (Step 6). Leave the Cursor rule in place for Cursor users, or delete it if the user confirms they no longer use Cursor in this workspace.
+10. **Commit:**
    ```bash
    cd ~/workspace/<project>_workspace
    git add .
