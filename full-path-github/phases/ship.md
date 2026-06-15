@@ -153,6 +153,40 @@ EOF
 )"
 ```
 
+## Step 6.5: Surface Newly-Unblocked Downstream Issues
+
+This PR `Closes #{issue}`. When a human merges it, that issue closes and any
+issue that was **blocked by it** may become runnable. The orchestrator doesn't
+merge (human gate), so it can't flip labels at merge time — but it **can report
+what will unblock**, so the next loop tick (or the human) promotes them.
+
+Find issues this one blocks, and whether closing it clears their last blocker:
+
+```bash
+# Issues that list THIS issue as a blocker:
+gh api repos/{owner/repo}/issues/{NNN}/dependencies/blocking \
+  --jq '.[] | "#\(.number) \(.title)"'
+
+# For each, after this PR merges, check if it has any OTHER still-open blocker:
+gh api repos/{owner/repo}/issues/{BLOCKED_N}/dependencies/blocked_by \
+  --jq '[.[] | select(.state=="open" and .number != {NNN})] | length'
+# 0 → it becomes fully unblocked when this merges → promote to `ready`
+```
+
+Note the result in the issue comment (Step 6) and the final report so the
+queue can be kept honest:
+
+```markdown
+### Unblocks on merge
+- #{B} — becomes `ready` (no other open blockers)
+- #{C} — still blocked by #{D}
+```
+
+> Promotion itself (adding `ready` to newly-unblocked issues) is left to the
+> human or a merge-triggered automation, since the orchestrator stops before
+> merge. The dependency gate in `intake.md` is the backstop if a blocked issue
+> is picked up anyway.
+
 ## Step 7: Final Report
 
 ```text

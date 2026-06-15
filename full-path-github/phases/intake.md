@@ -25,6 +25,68 @@ If literally empty (blank issue with no title), stop and report.
 
 Record the current labels and assignees for the execution log.
 
+## Step 1.5: Dependency Gate (blocked-by check)
+
+GitHub issues carry native **dependencies** (`blocked_by` / `blocking`) and
+**sub-issues**. Never start an issue whose blockers are still open — the work
+will hit a missing precondition and stall mid-run.
+
+Query the blockers (the summary lives in the issue JSON; the list is a
+separate endpoint):
+
+```bash
+# Quick count — is anything blocking this issue?
+gh api repos/{owner/repo}/issues/{NNN} \
+  --jq '.issue_dependencies_summary.blocked_by'
+
+# The actual blockers, with their state:
+gh api repos/{owner/repo}/issues/{NNN}/dependencies/blocked_by \
+  --jq '.[] | "#\(.number) [\(.state)] \(.title)"'
+```
+
+> Note: these endpoints are eventually-consistent. A `summary` of `0` right
+> after a write can be stale — trust the `dependencies/blocked_by` **list**
+> over the `summary` count when they disagree.
+
+### Decision
+
+- **Any blocker still `open`** → do **not** proceed. Add `orchestrator-blocked`,
+  comment which issues block this one, and stop:
+
+  ```bash
+  gh issue edit {NNN} --repo {owner/repo} --add-label orchestrator-blocked
+  gh issue comment {NNN} --repo {owner/repo} --body \
+    "**Blocked by open dependencies:** {#A, #B}. Will pick this up once they close."
+  ```
+
+  If this issue also has the `ready` label, remove it — a blocked issue is
+  not ready, and leaving the label invites the loop to re-grab it:
+  `gh issue edit {NNN} --repo {owner/repo} --remove-label ready`.
+
+- **All blockers `closed` (or none)** → proceed to Step 2.
+
+### For unattended / loop runs — pick a runnable issue, don't just gate one
+
+When the orchestrator is selecting work from a queue (not handed a specific
+`#NNN`), filter the `ready` set down to issues with **zero open blockers**
+before choosing — gating after selection wastes a run. A dependency-aware
+picker:
+
+```bash
+for n in $(gh issue list --repo {owner/repo} --label ready --state open \
+             --json number --jq '.[].number'); do
+  open_blockers=$(gh api repos/{owner/repo}/issues/$n/dependencies/blocked_by \
+    --jq '[.[] | select(.state=="open")] | length')
+  [ "$open_blockers" -eq 0 ] && echo "$n is runnable"
+done
+```
+
+**Convention that keeps the queue honest:** mark only currently-unblocked
+leaves `ready`; when a PR merges and closes a blocker, promote the issues it
+unblocks to `ready` (this can be a follow-up automation). The `ready` label is
+the *human-promoted* signal; the dependency gate is the *machine-enforced*
+backstop. Both must agree before work starts.
+
 ## Step 2: Discover Project Skills
 
 Scan for project-level skills the orchestrator can lean on. These provide

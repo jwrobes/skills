@@ -102,7 +102,25 @@ Personal projects don't need a six-state Kanban. The orchestrator uses
 
 Add a single optional label `orchestrator-blocked` only when the orchestrator
 needs human input mid-flight. The presence of that label is the only
-"blocked" signal — its absence means work continues.
+"blocked-on-human" signal — its absence means work continues.
+
+### Native dependencies & sub-issues (work-ordering signals)
+
+GitHub provides two native relationships the orchestrator respects (GA 2025):
+
+| Relationship | Meaning | API |
+|--------------|---------|-----|
+| **Sub-issue** | Parent tracker → child leaves | `POST issues/{n}/sub_issues` (`-F sub_issue_id=<int>`) |
+| **Dependency** | This issue is `blocked_by` / `blocking` another | `POST issues/{n}/dependencies/blocked_by` (`-F issue_id=<int>`) |
+
+These differ from `orchestrator-blocked` (which is "blocked on a human").
+`blocked_by` is "blocked on **other work**" — INTAKE's dependency gate refuses
+to start an issue with open blockers (see `intake.md` Step 1.5), and SHIP
+reports which downstream issues a merge will unblock (`ship.md` Step 6.5).
+
+> Gotcha: both POST bodies take an **integer** id (`-F`, not `-f`). The string
+> form silently no-ops. Reads are eventually-consistent — trust the
+> `dependencies/blocked_by` list over the `summary` count when they disagree.
 
 Create the label once in the repo:
 
@@ -119,8 +137,9 @@ Issue URL + Project
   │
   ├─ 1. INTAKE (intake.md)                    ── assign issue to me
   │     Fetch issue, find code context,
+  │     dependency gate (skip if blocked_by open),
   │     vagueness gate (what/where/verify)
-  │     → blocked if too vague
+  │     → blocked if too vague OR has open blockers
   │
   ├─ 2. ENRICH (enrich.md)                    ── update issue body
   │     Pattern quality evaluation
@@ -208,6 +227,7 @@ When the user says "resume the orchestrator on issue #NNN":
 | Error | Action |
 |-------|--------|
 | Issue is private and you don't have access | Stop. |
+| Issue has open `blocked_by` dependencies (intake) | Add `orchestrator-blocked`, comment which issues block it, stop. Don't start blocked work. |
 | Code context not found (intake) | Add `orchestrator-blocked` label, comment asking for pointers |
 | Vagueness gate fails | Add `orchestrator-blocked` label, comment listing unanswerable questions |
 | Low-confidence decision (enrich) | Mode-dependent: block or split |
