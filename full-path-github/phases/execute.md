@@ -10,7 +10,7 @@ dispatch.
 - Plan phase complete (`PROMPT.md` + task files exist in the worktree)
 - Parallel execution groups identified
 - Worktree exists and is on the correct branch
-- Access to `~/.cursor/skills/tdd-pocock/SKILL.md`
+- Access to `~/workspace/skills/tdd-pocock/SKILL.md`
 
 ## Step 1: Choose Execution Strategy
 
@@ -24,7 +24,7 @@ Based on task count and complexity:
 
 ## Step 2: Read the TDD Loop
 
-Read `~/.cursor/skills/tdd-pocock/SKILL.md` once and keep its rules in
+Read `~/workspace/skills/tdd-pocock/SKILL.md` once and keep its rules in
 mind for every task:
 
 - Vertical slices via tracer bullets (one test → one impl → repeat).
@@ -74,7 +74,7 @@ For each execution group, compose the subagent prompt:
 You are executing tasks from a structured backlog.
 
 System prompt: read {worktree_path}/backlog/PROMPT.md
-TDD method:    read ~/.cursor/skills/tdd-pocock/SKILL.md and follow it
+TDD method:    read ~/workspace/skills/tdd-pocock/SKILL.md and follow it
                STRICTLY (vertical slices, no horizontal slicing).
 
 Tasks (in order):

@@ -11,7 +11,7 @@ This phase runs AFTER ship. It does not block the PR.
 
 - Ship phase complete (PR created, execution log available)
 - Full execution log from all phases (decisions, blocks, friction)
-- Optional: access to `~/.cursor/skills/improve-codebase-architecture/SKILL.md`
+- Optional: access to `~/workspace/skills/improve-codebase-architecture/SKILL.md`
 
 ## Step 1: Analyze Session Friction
 
@@ -64,15 +64,15 @@ Write a complete `SKILL.md` following the conventions in your other skills:
 
 **Friction point:** {what happened during the session}
 **Reusability:** {why this will come up again}
-**Location:** `.cursor/skills/{name}/SKILL.md` (project-level)
+**Location:** `.claude/skills/{name}/SKILL.md` (project-level)
 
 {Full SKILL.md content}
 ```
 
 ### Where to place new skills
 
-- **Project-specific** ("how to add a feature flag in this app") → `{repo_root}/.cursor/skills/{name}/SKILL.md` (commit it).
-- **Cross-project** ("how to structure a webhook handler") → `~/.cursor/skills/{name}/SKILL.md` and consider publishing to your public skills repo.
+- **Project-specific** ("how to add a feature flag in this app") → `{repo_root}/.claude/skills/{name}/SKILL.md` (commit it).
+- **Cross-project** ("how to structure a webhook handler") → `~/workspace/skills/{name}/SKILL.md` and consider publishing to your public skills repo.
 
 ## Step 3: Identify Codebase Refactors
 
@@ -130,7 +130,7 @@ Write an implementable plan that can be turned into a GitHub issue:
 For each identified skill, write the `SKILL.md` to the appropriate location:
 
 ```bash
-mkdir -p {repo_root}/.cursor/skills/{name}
+mkdir -p {repo_root}/.claude/skills/{name}
 # Write SKILL.md
 ```
 

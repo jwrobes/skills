@@ -8,8 +8,8 @@ content. Evaluate candidate patterns for quality.
 
 - Intake phase complete (code context gathered, vagueness gate passed)
 - `guardrails.md` read (confidence tiers, pattern evaluation rules)
-- Access to `~/.cursor/skills/grill-me/SKILL.md` for the interrogation framework
-- Access to `~/.cursor/skills/code-review/SKILL.md` for the review rubric
+- Access to `~/workspace/skills/grill-me/SKILL.md` for the interrogation framework
+- Access to `~/workspace/skills/code-review/SKILL.md` for the review rubric
 
 ## Step 1: Evaluate Candidate Patterns
 

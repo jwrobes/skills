@@ -9,7 +9,7 @@ history as a comment on the issue.
 - Validate phase complete (all layers passed)
 - Code committed in the worktree
 - Execution log accumulated from all previous phases
-- Access to `~/.cursor/skills/gh-pr-create/SKILL.md`
+- Access to `~/workspace/skills/gh-pr-create/SKILL.md`
 
 ## Step 1: Prepare Commits
 
@@ -92,7 +92,7 @@ Closes #{issue_number}
 
 ## Step 4: Create the Draft PR
 
-Read `~/.cursor/skills/gh-pr-create/SKILL.md` for the exact `gh pr create`
+Read `~/workspace/skills/gh-pr-create/SKILL.md` for the exact `gh pr create`
 recipe. The orchestrator opens the PR as a **draft** initially:
 
 ```bash

@@ -9,7 +9,7 @@ available).
 - Execute phase complete (all tasks done, tests passing locally)
 - Code committed in the worktree
 - Task files with acceptance criteria available
-- Access to `~/.cursor/skills/code-review/SKILL.md`
+- Access to `~/workspace/skills/code-review/SKILL.md`
 
 ## Layer 1: Test Suite
 
@@ -32,6 +32,63 @@ If tests fail:
 2. Fix the failures.
 3. Re-run the suite.
 4. If still failing after 2 attempts → stop and report per guardrails.
+
+## Layer 1.5: Schema-Refutation Check (external-contract code)
+
+**Applies when** the diff calls an external API, writes to a typed store,
+or otherwise sends a payload whose field names/shapes are defined by a
+contract the code doesn't own (REST/GraphQL bodies, DB columns, message
+schemas, RPC requests). **Skip (`n/a`)** for pure-internal changes.
+
+This is the layer that earns its keep on **write paths that silently
+no-op on a wrong field name** — e.g. a financial API that returns `200 OK`
+and ignores a misspelled key, so the test passes and the live effect never
+happens. Tests and even a code-review can sail past a guessed field name;
+only a check that *diffs the payload against the authoritative schema*
+catches it.
+
+Spawn a **fresh-context verifier** (subagent / new conversation) given
+**only**: (a) the diff, (b) the authoritative schema source, and (c) the
+list of write/contract call sites. Prompt it to **refute, not confirm**:
+
+> You are a skeptical schema auditor. Default to "WRONG" unless you can
+> prove a field is correct against the cited schema. Do **not** trust the
+> code's comments, variable names, or the author's intent — trust only the
+> schema source.
+>
+> Authoritative schema: {path/URL to the verified spec — e.g. the OpenAPI
+> file, the migration, the .proto, or the verified-schemas block in the
+> issue/plan}.
+>
+> For every outbound payload in the diff (every `_post`/`_patch`/`_put`/
+> `_delete` body, every insert/update dict, every request object):
+> 1. List each field name the code actually sends.
+> 2. For each, find it in the schema. Quote the schema line. If you can't
+>    find it verbatim → mark **WRONG (not in schema)**.
+> 3. Check the value shape/units against the schema (e.g. milliunits vs
+>    dollars, `YYYY-MM-01` vs `YYYY-MM-DD`, enum membership, required-vs-
+>    optional, nesting depth like `{"category": {...}}`).
+> 4. Flag any **required** field the schema demands that the payload omits.
+>
+> Return a table: `call site | field sent | in schema? (quote) | shape ok? | verdict`.
+> End with: any WRONG verdict → overall **REFUTED**; else **CONFIRMED**.
+
+### Pass criteria
+
+- [ ] Every outbound field name appears verbatim in the authoritative schema
+- [ ] Value shapes/units/enums/date-formats match the schema
+- [ ] No required field is omitted
+- [ ] Verifier returns **CONFIRMED**
+
+If **REFUTED**: fix the field name/shape in the worktree, re-run Layer 1
+tests, then re-run this verifier **once**. If still REFUTED → stop and
+report per guardrails (a guessed contract is a correctness defect, not a
+style nit — never ship past it).
+
+> Why this exists: per improvement-plan move #2, the refute-first checker
+> is the point of the maker/checker split. A confirming reviewer rubber-
+> stamps plausible-looking field names; a refuting one assumes they're
+> guessed until the schema proves otherwise.
 
 ## Layer 2: Acceptance Criteria Verification
 
@@ -67,7 +124,7 @@ If any AC is uncovered:
 Spawn a fresh-context reviewer (subagent or new conversation) to score
 the diff against `code-review`:
 
-> Read `~/.cursor/skills/code-review/SKILL.md` for the framework.
+> Read `~/workspace/skills/code-review/SKILL.md` for the framework.
 >
 > Review the diff: `git diff main...HEAD` in the worktree at
 > {worktree_path}.
@@ -219,6 +276,7 @@ EOF
 ## Validate
 
 **Layer 1 — Tests:** {pass_count} passing, {fail_count} failing
+**Layer 1.5 — Schema refutation:** {confirmed / refuted→fixed / n/a} ({fields_checked} fields across {call_sites} call sites)
 **Layer 2 — ACs:** {covered}/{total} verified
 **Layer 3 — Review:**
 | Phase | Score | Findings |

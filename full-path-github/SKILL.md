@@ -16,8 +16,10 @@ delivers a reviewed, tested pull request. Stops only when it genuinely
 can't proceed — otherwise makes decisions, documents them, and moves on.
 
 This is a personal-projects orchestrator: assumes one repo owner (you),
-no SLA, the `gh` CLI for all GitHub interaction, and a `~/personal/{project}/`
-worktree convention.
+no SLA, the `gh` CLI for all GitHub interaction, and the `~/workspace/`
+worktree convention — worktrees live in a sibling `~/workspace/{project}_workspace/`
+directory, named `{project}-{slug}`, on a `build-{slug}` branch (see Input
+and EXECUTE).
 
 ## Intent Detection
 
@@ -38,11 +40,11 @@ worktree convention.
 |----------|---------|
 | Mode | `auto` (other options: `plan-first`, `build-first`) |
 | Branch name | `build-{issue-slug}` |
-| Worktree path | `~/personal/{project}/worktrees/{slug}/` |
+| Worktree path | `~/workspace/{project}_workspace/{project}-{slug}/` |
 
 ## Prerequisites
 
-### Skills (at `~/.cursor/skills/` or installed via `install.sh`)
+### Skills (at `~/workspace/skills/` or installed via `install.sh`)
 
 | Skill | Phase | Required |
 |-------|-------|----------|
@@ -64,7 +66,7 @@ Verify before starting:
 
 ```bash
 gh auth status
-ls ~/.cursor/skills/{grill-me,structured-backlog,tdd-pocock,code-review,gh-pr-create}/SKILL.md
+ls ~/workspace/skills/{grill-me,structured-backlog,tdd-pocock,code-review,gh-pr-create}/SKILL.md
 ```
 
 ## Sub-Skills
@@ -137,10 +139,11 @@ Issue URL + Project
   │     Parallel groups via subagents (optional)
   │
   ├─ 5. VALIDATE (validate.md)
-  │     Layer 1: Tests pass
-  │     Layer 2: ACs verified
-  │     Layer 3: code-review ≥ Solid
-  │     Layer 4: E2E hooks pass (if applicable)
+  │     Layer 1:   Tests pass
+  │     Layer 1.5: Schema-refutation (refute-first; external-contract code)
+  │     Layer 2:   ACs verified
+  │     Layer 3:   code-review ≥ Solid
+  │     Layer 4:   E2E hooks pass (if applicable)
   │     → blocked if validation fails after retry
   │
   ├─ 6. SHIP (ship.md)                        ── draft PR → ready for review

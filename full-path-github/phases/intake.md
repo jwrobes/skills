@@ -32,9 +32,9 @@ project-specific patterns the generic skills don't know about.
 
 ### Scan locations (in priority order)
 
-1. **Worktree skills:** `{worktree_path}/.cursor/skills/`
-2. **Repo-root skills:** `{repo_root}/.cursor/skills/`
-3. **User skills:** `~/.cursor/skills/` (already loaded in your session)
+1. **Worktree skills:** `{worktree_path}/.claude/skills/`
+2. **Repo-root skills:** `{repo_root}/.claude/skills/`
+3. **User skills:** `~/workspace/skills/` (already loaded in your session)
 
 ### Read each skill's frontmatter
 

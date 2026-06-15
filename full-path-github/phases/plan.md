@@ -8,24 +8,29 @@ built first if they don't exist and they're feasible.
 
 - Enrich phase complete (decision tree resolved, ACs generated)
 - Issue body contains enriched engineering considerations
-- Access to `~/.cursor/skills/structured-backlog/SKILL.md`
+- Access to `~/workspace/skills/structured-backlog/SKILL.md`
 
 ## Step 1: Set Up the Worktree
 
 If you don't already have an isolated worktree for this issue, create
 one now using `scaffold-workspace` (or your preferred worktree convention).
 
-Default convention for personal projects:
+Default convention (`~/workspace/`): the main clone lives at
+`~/workspace/$PROJECT`, and worktrees go in the sibling
+`~/workspace/${PROJECT}_workspace/` directory, named `$PROJECT-$SLUG`:
 
 ```bash
-PROJECT={short-project-name}
+PROJECT={short-project-name}          # e.g. claw-playbook
 SLUG={kebab-case-issue-slug}
 
-mkdir -p ~/personal/$PROJECT/worktrees
-git -C ~/personal/$PROJECT worktree add \
-  ~/personal/$PROJECT/worktrees/$SLUG \
+git -C ~/workspace/$PROJECT worktree add \
+  ~/workspace/${PROJECT}_workspace/$PROJECT-$SLUG \
   -b build-$SLUG
 ```
+
+(`~/workspace/${PROJECT}_workspace/` already exists for active projects;
+`worktree add` creates the leaf dir. The `_workspace` parent is a sibling
+of the main clone, not nested inside it.)
 
 Record the worktree path for use in EXECUTE / VALIDATE / SHIP.
 
@@ -36,8 +41,8 @@ Determine if E2E validation hooks exist for this project/feature.
 Search for:
 - Existing test scripts validating end-to-end behavior
 - Playwright scripts, API harnesses, fixture replays
-- Project-level QA skills in `~/.cursor/skills/` or the project's
-  `.cursor/skills/` directory
+- Project-level QA skills in `~/workspace/skills/` or the project's
+  `.claude/skills/` directory
 
 ### If hooks exist
 
@@ -86,7 +91,7 @@ Write the plan to:
 
 ## Step 4: Decompose into Task Files
 
-Read and follow `~/.cursor/skills/structured-backlog/SKILL.md`.
+Read and follow `~/workspace/skills/structured-backlog/SKILL.md`.
 
 Input: the implementation plan from Step 3.
 
