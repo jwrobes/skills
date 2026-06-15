@@ -23,14 +23,28 @@ Default convention (`~/workspace/`): the main clone lives at
 PROJECT={short-project-name}          # e.g. claw-playbook
 SLUG={kebab-case-issue-slug}
 
+git -C ~/workspace/$PROJECT fetch origin main
 git -C ~/workspace/$PROJECT worktree add \
   ~/workspace/${PROJECT}_workspace/$PROJECT-$SLUG \
-  -b build-$SLUG
+  -b build-$SLUG origin/main          # ← branch off main EXPLICITLY
 ```
 
 (`~/workspace/${PROJECT}_workspace/` already exists for active projects;
 `worktree add` creates the leaf dir. The `_workspace` parent is a sibling
 of the main clone, not nested inside it.)
+
+> **Branch off `origin/main`, NOT the current branch — always be explicit.**
+> Without the explicit base, `worktree add -b` branches from wherever HEAD
+> happens to be. When the orchestrator runs several leaves of one parent in a
+> row (e.g. a decomposed plan: foundation → reads → writes), the naive default
+> stacks each leaf on the previous unmerged one. Stacked branches then
+> **conflict on merge** — the second PR carries duplicate copies of the first
+> PR's commits, and once PR #1 lands as a merge commit, PR #2 goes
+> `CONFLICTING`. Each leaf must be an **independent branch off `main`** so the
+> PRs merge in any order. (For genuine code dependencies between leaves, the
+> dependency gate in `intake.md` sequences the *work*; the *branches* still
+> start from `main`, and SHIP's pre-push rebase keeps them current — see
+> `ship.md` Step 2.)
 
 Record the worktree path for use in EXECUTE / VALIDATE / SHIP.
 

@@ -27,12 +27,43 @@ Verify commits follow project conventions:
 If commits need cleanup, reorganize with interactive rebase or amend.
 Check `CONTRIBUTING.md` for project conventions.
 
-## Step 2: Push the Branch
+## Step 2: Rebase onto main, then Push
+
+Before pushing, make sure the branch is current with `main` — `main` may have
+moved during the run (e.g. a sibling leaf merged), which would make this PR
+conflict or carry duplicate commits.
 
 ```bash
 cd {worktree_path}
-git push -u origin HEAD
+git fetch origin main
+
+# Is this branch behind / stacked on something already merged?
+git log --oneline origin/main..HEAD     # should be ONLY this issue's commits
 ```
+
+If the branch was correctly cut from `main` (per `plan.md` Step 1), the log
+shows just this issue's commits and a rebase is a fast no-op. If it shows a
+**sibling leaf's commits too**, the branch was stacked — rebase to drop them:
+
+```bash
+git rebase origin/main
+# Already-merged sibling commits drop out automatically (same patch-id).
+# If a genuine conflict surfaces, resolve it, `git rebase --continue`,
+# then RE-RUN the validation suite (Layer 1 tests) before pushing —
+# a rebase can silently break a merge.
+```
+
+Re-confirm green, then push:
+
+```bash
+{test_command}            # must still pass after the rebase
+git push -u origin HEAD --force-with-lease   # --force-with-lease only if rebased
+```
+
+> Why this lives here: branching off `main` (plan.md Step 1) prevents stacking
+> *up front*; this rebase is the **backstop** for when `main` moved mid-run or a
+> dependency forced a stack. The orchestrator resolves its own branch currency
+> rather than handing a `CONFLICTING` PR to the human.
 
 ## Step 3: Compose PR Description
 
