@@ -54,6 +54,49 @@ All three must be "yes" to proceed. Any "no" → add `orchestrator-blocked` labe
 - If hooks don't exist for this feature and they make sense, building them is **task-001** in the structured backlog.
 - If hooks can't be built (infrastructure missing, credentials unavailable), document the gap in the PR description and proceed.
 
+## Discovered-Problem Triage (mid-run surprises)
+
+When a phase uncovers a problem the issue didn't anticipate — a missing
+precondition, a merge conflict, a wrong assumption in the plan, a file that
+isn't where it was supposed to be — **do not silently work around it and do not
+improvise a large fix.** Classify it first, then act by the table. The goal is
+to never make the situation *harder to reason about* than you found it.
+
+| The problem is… | Action |
+|-----------------|--------|
+| **In-scope and small** (a typo, a missing import, a test that needs a fixture you can write) | Fix it inline. Note it in the execution log. Continue. |
+| **A wrong assumption in the issue/plan** (path doesn't exist, baseline differs from what the AC assumed, a "new" thing already partly exists) | **Stop. Comment on the issue** with exactly what you found vs. what was assumed, correct the issue body/ACs to match reality, and report. Do NOT proceed on a plan you now know is wrong — a wrong decomposition surfaced at PR time is the expensive failure mode. |
+| **A missing precondition you could fabricate** (an entire file/module that "should" exist but doesn't) | **Stop and report. Never fabricate it.** Offer the human concrete unblock options (vendor the file, point you at the real repo, or confirm greenfield). Fabricating guesses a contract you can't verify. |
+| **A blocker outside this issue's scope** (a sibling PR must merge first, infra missing) | Add `orchestrator-blocked`, comment which external thing blocks it, stop. |
+
+**Cardinal rule:** *prefer reverting your own half-change and reporting over
+leaving a partial, confusing state.* A clean "here's what I found, here's why I
+stopped" is worth more than a messy attempt that someone has to untangle.
+
+### Worked example — a sibling PR merged and now THIS PR conflicts
+
+This is a *branch-currency* problem, not a code problem. Handle it in this exact
+order — the order matters because GitHub will trap you otherwise:
+
+1. **Rebase the EXISTING branch onto `main`**, don't start over:
+   `git fetch origin main && git rebase origin/main`. Already-merged sibling
+   commits drop out by patch-id; genuine conflicts are resolved by **keeping
+   both sides** (sibling additions are usually orthogonal to yours).
+2. **Re-run the test suite** — a rebase can silently break things.
+3. **`git push --force-with-lease`** the same branch. If the PR is still open,
+   this updates it in place — done.
+4. **Do NOT delete the base branch or the head branch to "clean up" first.**
+   A PR whose base branch was deleted (or whose head was force-pushed) **cannot
+   be reopened** if it ends up closed. That is GitHub behavior, not a bug.
+5. **If the PR was already auto-closed** (base branch gone): accept it's dead.
+   Open a **clean replacement PR** from the rebased branch, and put
+   "Supersedes #NN — original auto-closed when its stacked base branch was
+   deleted" in the body. Report both numbers.
+
+> Prevention beats all of this: per `plan.md` Step 1, branch every leaf off
+> `main` (never stack on a sibling), and per `ship.md` Step 2, rebase before the
+> first push. Stacking is what creates these conflicts in the first place.
+
 ## Hard Stops
 
 Stop and report immediately if:
