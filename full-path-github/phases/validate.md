@@ -174,12 +174,49 @@ bugs that survive unit tests.
 
 ### Step 4a: Determine whether E2E applies
 
-If no hook exists and none was feasible (PLAN documented this), Layer 4
-is `n/a`. Note it in the log and proceed.
+The orchestrator stays **project-agnostic** — it does not know any specific
+API or test framework. It discovers a project's E2E hook through one
+convention: a manifest file **`.e2e.json` at the repo root**.
+
+```bash
+cat {repo_root}/.e2e.json 2>/dev/null
+```
+
+The manifest is deliberately minimal:
+
+```json
+{
+  "command": "python -m bosque.testing.e2e --replay",
+  "record":  "python -m bosque.testing.e2e --record",
+  "describe": "Stateful-fake + replay e2e for YNAB/Google/ElevenLabs tools"
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `command` | **Required.** The replay/verify run — deterministic, **no live keys**, safe to run in cloud/CI. Layer 4 runs this and gates on its exit code (0 = pass). |
+| `record` | Optional. Refreshes fixtures against the real APIs — **needs live keys, dev-machine only.** The orchestrator NEVER runs this; it's a human action when an API changes. Surface it in the report if a contract drift is suspected. |
+| `describe` | Optional. One line for the execution log. |
+
+Resolution:
+
+- **`.e2e.json` present** → run `command`, gate on it (Step 4b). The project
+  owns everything behind that command (which fakes are stateful vs. replay,
+  which tiers run); the orchestrator only sees pass/fail. This is how Layer 4
+  stays generic while a project (e.g. claw-playbook) plugs in arbitrarily rich
+  e2e — including stateful-fake **Tier-3 semantic** checks.
+- **No `.e2e.json`** → fall back to any E2E hook identified in PLAN. If none was
+  feasible either, Layer 4 is `n/a`; note it in the log and proceed.
+
+> Why a manifest, not a hardcoded command: the orchestrator is reused across
+> projects. It must not learn YNAB, Gmail, pytest, or OpenClaw. `.e2e.json` is
+> the whole contract — "here's my one command, gate on it." A project with no
+> manifest simply has no Layer-4 gate, exactly as today.
 
 ### Step 4b: Run the E2E pipeline
 
-Invoke the project's E2E skill or script. Test at least one positive
+If a `.e2e.json` manifest was found, run its `command`. Otherwise invoke the
+project's E2E skill or script identified in PLAN. Test at least one positive
 case and (where applicable) one negative case.
 
 ### Pass criteria

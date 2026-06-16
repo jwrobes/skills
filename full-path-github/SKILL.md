@@ -54,6 +54,7 @@ and EXECUTE).
 | `code-review` | Enrich + Validate | Yes |
 | `scaffold-workspace` | Pre-execute | Optional but recommended |
 | `gh-pr-create` | Ship | Yes |
+| `comprehension-artifact` | Ship | Optional, strongly encouraged (non-trivial work) |
 
 ### Tools
 

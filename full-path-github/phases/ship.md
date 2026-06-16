@@ -121,6 +121,39 @@ Closes #{issue_number}
 </details>
 ```
 
+## Step 3.5: Comprehension Artifact (optional, strongly encouraged)
+
+Before opening the PR, decide whether this change warrants a **comprehension
+artifact** — a "what I built" HTML page so the human can review from a phone
+without pulling code. This is the output-explainer half of decision #9.
+
+Read `~/workspace/skills/comprehension-artifact/SKILL.md` and run its gate:
+
+- **Multi-file / new capability / new external surface (API, tool, skill) /
+  non-obvious design → render it.** Strongly encouraged, not mandatory.
+- **Trivial (single-file fix, rename, dep bump, docs) → skip**, but say so
+  explicitly in the PR body ("comprehension artifact: skipped (trivial)") so the
+  reviewer knows it was a judgment call.
+
+When it applies, the skill:
+1. writes `docs/{slug}.html` into the **work-repo** (commit it with the change),
+2. returns a `## What I built` PR-body section (splice it into Step 3's body —
+   the link with three lines of context, inline in the PR),
+3. reports GitHub Pages status (enable serving from `docs/` on `main` if in
+   reach, else note as a follow-up).
+
+If the change has a **live contract a human verifies after merge** (a new tool
+surface, an external write path), the artifact is where the **tiered smoke
+checklist** lives (reads / reversible writes / one-time semantic checks) — see
+the `openclaw-is-the-smoke-harness` pattern. Don't also paste a second copy
+elsewhere; the artifact carries it.
+
+> Why a gate, not a hard block: a strong run can ship correct code without it,
+> and forcing it on trivial fixes is noise. But for new-capability work it is the
+> single highest-leverage thing for low-burden review — the email-triage run
+> (#105) shipped good code and skipped it, which is exactly the miss this step
+> exists to prevent.
+
 ## Step 4: Create the Draft PR
 
 Read `~/workspace/skills/gh-pr-create/SKILL.md` for the exact `gh pr create`
