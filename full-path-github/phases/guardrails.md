@@ -3,6 +3,52 @@
 Read this FIRST before any other `full-path-github` phase.
 These are hard rules — violating any one is a stop-and-report condition.
 
+## Where this skill lives (read if you're a cloud/headless session)
+
+This orchestrator lives in the **public `jwrobes/skills` repo**, NOT in the
+work-repo you're operating on. A session scoped to the work-repo can't see it
+unless it cloned it. If you're reading this, you already have it — but the
+**issue-tree conventions below are the canonical record**, because a session
+that picks up a labeled issue without a launch prompt won't know them otherwise:
+
+- **One leaf issue = one worktree = one branch (`build-{slug}`, cut from `main`)
+  = one PR.** Branch off `origin/main`, never stack on a sibling (see `plan.md`).
+- **Decomposition uses *native* GitHub sub-issues** (linked via the sub-issue
+  API, `POST issues/{n}/sub_issues -F sub_issue_id=<int>`), **not** markdown
+  checkbox lists. A parent tracker holds the leaves as native sub-issues.
+- **`ready` gates execution; `build-spec` marks an authored spec.** Only labels
+  that exist are used — don't invent a domain label that would 404 (create it
+  first with `gh label create` if you genuinely need it).
+- **`blocked_by` dependencies are respected** (intake gate) — don't start a leaf
+  with open blockers.
+
+> Why this is here: the #105 run had to reverse-engineer all of this from
+> existing issues (#90–94) because it wasn't written down anywhere the session
+> could reach. Any repo that delegates to this orchestrator should point at it —
+> see the work-repo's `build-specs/README.md` (or equivalent) for the pointer.
+
+### Multi-leaf-in-one-PR reconciliation
+
+The default is one leaf → one PR. But when two leaves are small and splitting
+them would create a **broken intermediate state** (e.g. a parser core + the loop
+that consumes it), landing both on one branch is legitimate. When you do:
+
+1. The PR body must say **which leaves it implements** and why they were combined.
+2. **Close each combined leaf** as completed, referencing the PR.
+3. **Annotate the parent tracker** — check the boxes, note "implemented in #PR".
+4. The parent tracker closes on merge (its `Closes #tracker` or a manual close).
+
+State this in the execution log so the queue stays honest.
+
+### Spec-PR ↔ implementation linkage
+
+When the work originates from a **spec that lives in its own PR** (the
+build-spec flow), tie them together explicitly so a reviewer finds both:
+the implementation PR body references the spec PR (`Implements spec PR #NN`),
+and ideally the implementation commits land **on the spec PR's branch** (the
+`build-specs/README.md` flow) rather than a disconnected branch. Don't leave the
+link implicit in a branch name.
+
 ## GitHub Issue Rules
 
 - The issue is the **single source of truth**. All state lives there.
@@ -47,6 +93,33 @@ After reading the issue AND searching the codebase, the orchestrator must answer
 3. **How to verify** — Can you state at least one testable acceptance criterion?
 
 All three must be "yes" to proceed. Any "no" → add `orchestrator-blocked` label with a comment listing which questions can't be answered.
+
+## Spec-Grounding Gate (when the issue/spec was authored elsewhere)
+
+When the work comes from a **build spec or plan authored away from this repo**
+(e.g. an agent wrote a spec against its memory of the codebase, not the live
+tree), the spec's paths/symbols are *assumptions, not facts*. Before EXECUTE,
+**pre-flight the spec against reality** — for every file path, function name,
+test path, and directory the spec cites:
+
+```bash
+# Does each cited path/symbol actually exist on main?
+git ls-files | grep -F '{cited/path}'        # path exists?
+grep -rn 'def {cited_function}' {dir}        # symbol exists?
+```
+
+| Finding | Action |
+|---------|--------|
+| All cited paths/symbols resolve | Proceed; note "spec grounded" in the log. |
+| Spec cites things that don't exist or are misnamed | This is a **wrong-assumption** problem → per Discovered-Problem Triage, **correct the spec/issue to the real tree and document the deviation**, then proceed. Do NOT implement against the imagined structure. |
+
+> Why this exists: the email-triage run (#105) found its spec referenced a
+> `tests/` dir, a `plans/email-triage-review-…md` file, and inline Sonnet calls
+> that **none existed** — the real repo used script-style tests, a different
+> plan file, and a shared Haiku module. The implementer caught it reactively;
+> this gate makes it a first-class step. The fix the run wrote up: spec authors
+> should ground specs against the real tree, but the orchestrator pre-flighting
+> is the backstop that always runs.
 
 ## E2E Validation Rules
 
