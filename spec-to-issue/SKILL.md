@@ -34,6 +34,35 @@ Corollaries:
 - **Never** reference a path in a local-only clone (no remote) or in a *different*
   repo than the one the executor is scoped to. Verify reachability (see Step 3).
 
+## Reaching SHARED skills (workshop) from a non-laptop instance
+
+Reusable skills live in **one source of truth** — `jwrobes/workshop` (and
+`jwrobes/skills` for the dev/orchestrator skills). How an instance reaches them
+depends on the instance, and there are **three** types (not two):
+
+| Instance | Skill access | Mechanism |
+|----------|--------------|-----------|
+| **Laptop** (interactive) | `~/.claude/skills/` symlinks → the workshop/skills checkouts | already set up; add a symlink per new shared skill |
+| **Cloud / web** (claude.ai/code) | repo-scoped, no shared FS | **clone at runtime** |
+| **Server cron** (headless) | bare `~/.claude`, NO skills dir, NO local checkout | **clone at runtime** (same as cloud) |
+
+So **clone-at-runtime is the portable mechanism for any non-laptop instance.**
+When a launch prompt (or a spec's instructions) needs a shared skill, include
+this preamble so the session can always reach it:
+
+```bash
+# Shared skills live in their own repos, NOT in this work-repo. Clone what you need:
+git clone --depth 1 https://github.com/jwrobes/skills.git   /tmp/skills    # dev/orchestrator skills
+git clone --depth 1 https://github.com/jwrobes/workshop.git /tmp/workshop  # shared workshop tools/skills
+# then read e.g. /tmp/skills/full-path-github/SKILL.md  or  /tmp/workshop/<skill>/SKILL.md
+```
+
+Only clone what the work actually needs. One source of truth, zero drift, zero
+per-repo vendoring — the cost is that the prompt must include the clone line, so
+make it boilerplate. (Vendoring a skill into the work-repo is the alternative —
+zero-setup reach but drift risk; reserve it for skills a session can't function
+without and that change rarely, like the orchestrator.)
+
 ## The spec-PR is a review surface, not an artifact
 
 A spec doesn't *need* a PR — but a PR is a far better **review** surface (inline
