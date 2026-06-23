@@ -41,6 +41,17 @@ so consistency is everything:
    a tracking artifact, not code: commit it to the repo's main so it shows
    immediately (don't strand it on the feature branch).
 
+4. **A product-level plan MUST declare its implementation repo** via frontmatter
+   `repo: <org>/<repo>` (e.g. `repo: Jwrobes-Magic/claw-playbook`). A plan that
+   lives in the planning/coordinator repo (`<product>-workbench`) but implements
+   elsewhere is **unreachable** from a session scoped to the impl repo — so the
+   `repo:` field is what tells `spec-to-issue` *where to file the issue* and the
+   dashboard's launch prompt to **copy the spec INLINE into an issue in that repo**
+   (never link the local plan doc). Without it, the launch prompt can't route the
+   work to a reachable place. (A plan that lives in the same repo it implements in
+   may omit `repo:` — it's already reachable.) This is the structural guard
+   against the planning→impl reachability dead-end.
+
 Result: the moment you scaffold, the dashboard shows the new initiative as one
 slug-paired card (plan + workbench + worktree), launchable via its handoff
 prompt. (Cloud-only work skips the local worktree/workbench — just the plan card +
