@@ -17,6 +17,48 @@ The main project repository must already be cloned at `~/workspace/<project>/`. 
 - User mentions "set up a workspace for \<project\>"
 - User wants to add a new initiative/feature to an existing workspace
 
+## Fleet integration (make new work show up in the dashboard)
+
+This skill is the **front door of the single work process**: scaffolding a
+workspace should produce *fleet-format* work so it appears, correctly linked, in
+the fleet dashboard (`workshop/fleet-dashboard/`). The dashboard pairs an
+initiative's worktree, workbench, and plan card **by a shared, normalized slug**,
+so consistency is everything:
+
+1. **One canonical `<slug>`** per initiative, used EVERYWHERE: the worktree dir
+   (`<repo>-<slug>`), the branch (**`build-<slug>`** — NOT `build-<username>-…`;
+   the username breaks the dashboard's slug-pairing), the workbench folder
+   (`workbench/<slug>/`), and the plan card. Normalize to hyphens (`_`/spaces →
+   `-`, lowercase).
+
+2. **Always create the paired workbench folder** `workbench/<slug>/` (with a
+   README) alongside the worktree — the local working surface the dashboard reads
+   and pairs to the worktree.
+
+3. **Write a plan card** to the work-repo's `plans/active/<slug>.md` (or
+   `<slug>/README.md`) with frontmatter `title:` and a one-line **Goal:** — the
+   durable, dashboard-readable record (shows even for cloud work). A plan card is
+   a tracking artifact, not code: commit it to the repo's main so it shows
+   immediately (don't strand it on the feature branch).
+
+4. **A product-level plan MUST declare its implementation repo** via frontmatter
+   `repo: <org>/<repo>` (e.g. `repo: Jwrobes-Magic/claw-playbook`). A plan that
+   lives in the planning/coordinator repo (`<product>-workbench`) but implements
+   elsewhere is **unreachable** from a session scoped to the impl repo — so the
+   `repo:` field is what tells `spec-to-issue` *where to file the issue* and the
+   dashboard's launch prompt to **copy the spec INLINE into an issue in that repo**
+   (never link the local plan doc). Without it, the launch prompt can't route the
+   work to a reachable place. (A plan that lives in the same repo it implements in
+   may omit `repo:` — it's already reachable.) This is the structural guard
+   against the planning→impl reachability dead-end.
+
+Result: the moment you scaffold, the dashboard shows the new initiative as one
+slug-paired card (plan + workbench + worktree), launchable via its handoff
+prompt. (Cloud-only work skips the local worktree/workbench — just the plan card +
+a GitHub issue; see `spec-to-issue`. scaffold-workspace lives in `jwrobes/skills`,
+not workshop, because every project uses it — it's *paired with* the fleet by
+this convention, not co-located.)
+
 ## The bootstrap-files pattern
 
 Many projects need credentials or config files (Shopify store passwords, API keys, asdf `.tool-versions`) that aren't safe to commit but need to be available to commands run from inside a worktree. The pattern this skill uses:
@@ -34,7 +76,7 @@ Ask the user for the following. Use sensible defaults where noted.
 
 1. **Project name** — The name of the project repo (e.g., `my-app`, `api-service`). Verify it exists at `~/workspace/<project>/`.
 2. **Initiative name** — What's the first unit of work? (e.g., `auth_refactor`, `dark_mode`). This becomes both the workbench subfolder and part of the worktree directory name. Use `lowercase_with_underscores`.
-3. **Branch name** — Git branch for the worktree. Default: `build-<username>-<initiative-name-with-hyphens>`. Detect `<username>` from `git config user.name` or `whoami`.
+3. **Branch name** — Git branch for the worktree. Default: **`build-<slug>`** (the canonical hyphenated initiative slug — see Fleet integration above; do NOT prefix the username, it breaks dashboard slug-pairing).
 4. **Reference projects** — Other repos the agent should have access to while working on this initiative. List of project names. The user can skip this.
 5. **Shared bootstrap files** — Does this project need any files at the workspace root that should be symlinked into every worktree? Common examples: `.env.local` (API keys, store passwords for Shopify/Vercel/etc.), `.tool-versions` (asdf), `credentials.json`. List them. The skill will create the file(s) at the workspace root, add them to `.gitignore`, and symlink them into each worktree so commands run from inside a worktree can read them.
 
